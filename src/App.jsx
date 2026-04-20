@@ -20,7 +20,6 @@ async function saveAll(data) {
   try {
     const clean = JSON.parse(JSON.stringify(data, (key, val) => val === undefined ? null : val));
     await setDoc(doc(db, USER_DOC), clean, { merge: true });
-    console.log("✅ Guardado:", clean.sources, clean.items, clean.movies);
   } catch (e) {
     console.error("❌ Error al guardar:", e);
   }
@@ -381,28 +380,30 @@ export default function App() {
   const [animKey,     setAnimKey]     = useState(0);
   const [loaded,      setLoaded]      = useState(false);
 
- // Load from Firebase once on startup
-useEffect(() => {
-  getDoc(doc(db, USER_DOC)).then((snap) => {
-    const data = snap.exists() ? snap.data() : {};
-    if (data.channels)    setChannels(data.channels);
-    if (data.savedVideos) setSavedVideos(data.savedVideos);
-    if (data.podcasts)    setPodcasts(data.podcasts);
-    if (data.sources)     setSources(data.sources);
-    if (data.items)       setItems(data.items);
-    if (data.movies)      setMovies(data.movies);
-    if (data.seenCh)      setSeenCh(data.seenCh);
-    if (data.seenFeed)    setSeenFeed(data.seenFeed);
-    if (data.seenVids)    setSeenVids(data.seenVids);
-    if (data.seenItems)   setSeenItems(data.seenItems);
-    if (data.seenInbox)   setSeenInbox(data.seenInbox);
-    if (data.seenMovies)  setSeenMovies(data.seenMovies);
-    if (data.todayData)   setTodayData(data.todayData);
-    if (data.streak)      setStreak(data.streak);
-    if (data.history)     setHistory(data.history);
-    setLoaded(true);
-  });
-}, []);
+// Load from Firebase once on startup
+  useEffect(() => {
+    getDoc(doc(db, USER_DOC)).then((snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      const arr = (v, fb) => Array.isArray(v) ? v : fb;
+      const obj = (v, fb) => (v && typeof v === "object" && !Array.isArray(v)) ? v : fb;
+      setChannels(arr(data.channels, []));
+      setSavedVideos(arr(data.savedVideos, []));
+      setPodcasts(arr(data.podcasts, []));
+      setSources(arr(data.sources, []));
+      setItems(arr(data.items, []));
+      setMovies(arr(data.movies, []));
+      setSeenCh(obj(data.seenCh, {}));
+      setSeenFeed(arr(data.seenFeed, []));
+      setSeenVids(arr(data.seenVids, []));
+      setSeenItems(arr(data.seenItems, []));
+      setSeenInbox(obj(data.seenInbox, {}));
+      setSeenMovies(arr(data.seenMovies, []));
+      if (data.todayData) setTodayData(data.todayData);
+      if (data.streak)    setStreak(data.streak);
+      setHistory(arr(data.history, []));
+      setLoaded(true);
+    });
+  }, []);
 
   // Save to Firebase whenever data changes
   useEffect(() => {
