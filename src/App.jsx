@@ -381,7 +381,7 @@ export default function App() {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, USER_DOC), (snap) => {
       const data = snap.exists() ? snap.data() : {};
-      const arr = (v, fb) => Array.isArray(v) ? v : fb;
+      const arr = (v, fb) => Array.isArray(v) ? v : [];
       const obj = (v, fb) => (v && typeof v === "object" && !Array.isArray(v)) ? v : fb;
       setChannels(arr(data.channels, []));
       setSavedVideos(arr(data.savedVideos, []));
@@ -411,7 +411,7 @@ export default function App() {
 
   const handleGenerate = (skipVideo = false, skipContent = false) => {
     const sCh    = JSON.parse(JSON.stringify(seenCh));
-    const sFeed  = [...seenFeed];
+    const sFeed  = [...seenFeed];c
     const sVids  = [...seenVids];
     const sItems = [...seenItems];
     const sInbox = JSON.parse(JSON.stringify(seenInbox));
