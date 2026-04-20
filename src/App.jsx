@@ -381,20 +381,19 @@ export default function App() {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, USER_DOC), (snap) => {
       const data = snap.exists() ? snap.data() : {};
-      const arr = (v, fb) => Array.isArray(v) ? v : [];
+      const arr = (v, fb) => Array.isArray(v) && v.length > 0 ? v : fb;
       const obj = (v, fb) => (v && typeof v === "object" && !Array.isArray(v)) ? v : fb;
       setChannels(arr(data.channels, []));
       setSavedVideos(arr(data.savedVideos, []));
       setPodcasts(arr(data.podcasts, []));
-      setSources(arr(data.sources, []));
-      setItems(arr(data.items, []));
-      setMovies(arr(data.movies, []));
+      setSources(p => arr(data.sources, p));
+      setItems(p => arr(data.items, p));
+      setMovies(p => arr(data.movies, p));
       setSeenCh(obj(data.seenCh, {}));
-      setSeenFeed(arr(data.seenFeed, []));
-      setSeenVids(arr(data.seenVids, []));
-      setSeenItems(arr(data.seenItems, []));
-      setSeenInbox(obj(data.seenInbox, {}));
-      setSeenMovies(arr(data.seenMovies, []));
+      setSeenFeed(p => arr(data.seenFeed, p));
+      setSeenVids(p => arr(data.seenVids, p));
+      setSeenItems(p => arr(data.seenItems, p));
+      setSeenMovies(p => arr(data.seenMovies, p));
       if (data.todayData) setTodayData(data.todayData);
       if (data.streak)    setStreak(data.streak);
       setHistory(arr(data.history, []));
@@ -406,6 +405,7 @@ export default function App() {
   // Save to Firebase whenever data changes
   useEffect(() => {
     if (!loaded) return;
+    console.log("Guardando sources:", sources);
     saveAll({ channels, savedVideos, podcasts, sources, items, movies, seenCh, seenFeed, seenVids, seenItems, seenInbox, seenMovies, todayData, streak, history });
   }, [channels, savedVideos, podcasts, sources, items, movies, seenCh, seenFeed, seenVids, seenItems, seenInbox, seenMovies, todayData, streak, history, loaded]);
 
