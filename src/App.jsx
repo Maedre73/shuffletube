@@ -1,27 +1,31 @@
 import { useState, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
-// ─── Storage keys ─────────────────────────────────────────────
-const K = {
-  channels:    "st_channels",     // [{id,name,count}]
-  savedVideos: "st_savedVideos",  // [{id,title,source}]
-  podcasts:    "st_podcasts",     // [{id,name}]
-  sources:     "st_sources",      // [{id,name,type:"articles"|"inbox"|"topic",count?,searchIn?}]
-  items:       "st_items",        // [{id,title,sourceId,searchIn?}]
-  seenCh:      "st_seenCh",       // {channelId:[nums]}
-  seenFeed:    "st_seenFeed",     // [nums]
-  seenVids:    "st_seenVids",     // [videoIds]
-  seenItems:   "st_seenItems",    // [itemIds]
-  seenInbox:   "st_seenInbox",    // {sourceId:[nums]}
-  today:       "st_today",        // {date,video,content,videoDone,contentDone,videoNote,contentNote}
-  streak:      "st_streak",       // {count,lastDate}
-  history:     "st_history",      // [{date,video,content,videoNote,contentNote}]
-  movies:      "st_movies",       // [{id,title}]
-  seenMovies:  "st_seenMovies",   // [movieIds]
+// ─── Firebase config ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyARd7p4ThymwJaNvDrdCZKAGY089sPo-WA",
+  authDomain: "shuffletube-62373.firebaseapp.com",
+  projectId: "shuffletube-62373",
+  storageBucket: "shuffletube-62373.firebasestorage.app",
+  messagingSenderId: "477498530185",
+  appId: "1:477498530185:web:c6fac9e7417aa1c6cc2958",
+  measurementId: "G-KC4Y5KFJF9"
 };
-const FEED_MAX = 50;
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+const USER_DOC = "users/pablo";
 
-const ld  = (k, fb) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : fb; } catch { return fb; } };
-const sv  = (k, d)  => { try { localStorage.setItem(k, JSON.stringify(d)); } catch {} };
+async function saveAll(data) {
+  try {
+    const clean = JSON.parse(JSON.stringify(data, (key, val) => val === undefined ? null : val));
+    await setDoc(doc(db, USER_DOC), clean, { merge: true });
+  } catch (e) {
+    console.error("❌ Error al guardar:", e);
+  }
+}
+
+const FEED_MAX = 50;
 const uid = ()      => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const rnd = (a)     => a[Math.floor(Math.random() * a.length)];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -356,40 +360,54 @@ function MovieModal({ mov, onSave, onClose }) {
 
 // ─── App ──────────────────────────────────────────────────────
 export default function App() {
-  const [channels,    setChannels]    = useState(() => ld(K.channels, []));
-  const [savedVideos, setSavedVideos] = useState(() => ld(K.savedVideos, []));
-  const [podcasts,    setPodcasts]    = useState(() => ld(K.podcasts, []));
-  const [sources,     setSources]     = useState(() => ld(K.sources, []));
-  const [items,       setItems]       = useState(() => ld(K.items, []));
-  const [movies,      setMovies]      = useState(() => ld(K.movies, []));
-  const [seenMovies,  setSeenMovies]  = useState(() => ld(K.seenMovies, []));
-  const [seenCh,      setSeenCh]      = useState(() => ld(K.seenCh, {}));
-  const [seenFeed,    setSeenFeed]    = useState(() => ld(K.seenFeed, []));
-  const [seenVids,    setSeenVids]    = useState(() => ld(K.seenVids, []));
-  const [seenItems,   setSeenItems]   = useState(() => ld(K.seenItems, []));
-  const [seenInbox,   setSeenInbox]   = useState(() => ld(K.seenInbox, {}));
-  const [todayData,   setTodayData]   = useState(() => ld(K.today, null));
-  const [streak,      setStreak]      = useState(() => ld(K.streak, { count: 0, lastDate: null }));
-  const [history,     setHistory]     = useState(() => ld(K.history, []));
+  const [channels,    setChannels]    = useState([]);
+  const [savedVideos, setSavedVideos] = useState([]);
+  const [podcasts,    setPodcasts]    = useState([]);
+  const [sources,     setSources]     = useState([]);
+  const [items,       setItems]       = useState([]);
+  const [movies,      setMovies]      = useState([]);
+  const [seenMovies,  setSeenMovies]  = useState([]);
+  const [seenCh,      setSeenCh]      = useState({});
+  const [seenFeed,    setSeenFeed]    = useState([]);
+  const [seenVids,    setSeenVids]    = useState([]);
+  const [seenItems,   setSeenItems]   = useState([]);
+  const [seenInbox,   setSeenInbox]   = useState({});
+  const [todayData,   setTodayData]   = useState(null);
+  const [streak,      setStreak]      = useState({ count: 0, lastDate: null });
+  const [history,     setHistory]     = useState([]);
   const [tab,         setTab]         = useState("today");
   const [modal,       setModal]       = useState(null);
   const [animKey,     setAnimKey]     = useState(0);
+  const [loaded,      setLoaded]      = useState(false);
 
-  useEffect(() => sv(K.channels,    channels),    [channels]);
-  useEffect(() => sv(K.savedVideos, savedVideos), [savedVideos]);
-  useEffect(() => sv(K.podcasts,    podcasts),    [podcasts]);
-  useEffect(() => sv(K.sources,     sources),     [sources]);
-  useEffect(() => sv(K.items,       items),       [items]);
-  useEffect(() => sv(K.movies,      movies),      [movies]);
-  useEffect(() => sv(K.seenMovies,  seenMovies),  [seenMovies]);
-  useEffect(() => sv(K.seenCh,      seenCh),      [seenCh]);
-  useEffect(() => sv(K.seenFeed,    seenFeed),    [seenFeed]);
-  useEffect(() => sv(K.seenVids,    seenVids),    [seenVids]);
-  useEffect(() => sv(K.seenItems,   seenItems),   [seenItems]);
-  useEffect(() => sv(K.seenInbox,   seenInbox),   [seenInbox]);
-  useEffect(() => sv(K.today,       todayData),   [todayData]);
-  useEffect(() => sv(K.streak,      streak),      [streak]);
-  useEffect(() => sv(K.history,     history),     [history]);
+ // Load from Firebase once on startup
+useEffect(() => {
+  getDoc(doc(db, USER_DOC)).then((snap) => {
+    const data = snap.exists() ? snap.data() : {};
+    if (data.channels)    setChannels(data.channels);
+    if (data.savedVideos) setSavedVideos(data.savedVideos);
+    if (data.podcasts)    setPodcasts(data.podcasts);
+    if (data.sources)     setSources(data.sources);
+    if (data.items)       setItems(data.items);
+    if (data.movies)      setMovies(data.movies);
+    if (data.seenCh)      setSeenCh(data.seenCh);
+    if (data.seenFeed)    setSeenFeed(data.seenFeed);
+    if (data.seenVids)    setSeenVids(data.seenVids);
+    if (data.seenItems)   setSeenItems(data.seenItems);
+    if (data.seenInbox)   setSeenInbox(data.seenInbox);
+    if (data.seenMovies)  setSeenMovies(data.seenMovies);
+    if (data.todayData)   setTodayData(data.todayData);
+    if (data.streak)      setStreak(data.streak);
+    if (data.history)     setHistory(data.history);
+    setLoaded(true);
+  });
+}, []);
+
+  // Save to Firebase whenever data changes
+  useEffect(() => {
+    if (!loaded) return;
+    saveAll({ channels, savedVideos, podcasts, sources, items, movies, seenCh, seenFeed, seenVids, seenItems, seenInbox, seenMovies, todayData, streak, history });
+  }, [channels, savedVideos, podcasts, sources, items, movies, seenCh, seenFeed, seenVids, seenItems, seenInbox, seenMovies, todayData, streak, history, loaded]);
 
   const handleGenerate = (skipVideo = false, skipContent = false) => {
     const sCh    = JSON.parse(JSON.stringify(seenCh));
@@ -429,6 +447,15 @@ export default function App() {
   const artSrcs   = sources.filter(s => s.type === "articles");
   const fire      = streak.count >= 7 ? "🔥" : streak.count >= 3 ? "✨" : "🌱";
   const isToday   = todayData?.date === todayStr();
+
+  if (!loaded) return (
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Lato',sans-serif" }}>
+      <div style={{ textAlign: "center", color: "#b09070" }}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>☕</div>
+        <div style={{ fontSize: 14 }}>Cargando tu ShuffleTube…</div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Lato',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", padding: "0 16px 60px" }}>
