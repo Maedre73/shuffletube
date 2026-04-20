@@ -20,6 +20,7 @@ async function saveAll(data) {
   try {
     const clean = JSON.parse(JSON.stringify(data, (key, val) => val === undefined ? null : val));
     await setDoc(doc(db, USER_DOC), clean, { merge: true });
+    console.log("✅ Guardado:", clean.sources, clean.items, clean.movies);
   } catch (e) {
     console.error("❌ Error al guardar:", e);
   }
