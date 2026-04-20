@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, onSnapshot, setDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
 
 // ─── Firebase config ──────────────────────────────────────────
 const firebaseConfig = {
@@ -18,8 +18,11 @@ const USER_DOC = "users/pablo";
 
 async function saveAll(data) {
   try {
-    await setDoc(doc(db, USER_DOC), data, { merge: true });
-  } catch {}
+    const clean = JSON.parse(JSON.stringify(data, (key, val) => val === undefined ? null : val));
+    await setDoc(doc(db, USER_DOC), clean, { merge: true });
+  } catch (e) {
+    console.error("❌ Error al guardar:", e);
+  }
 }
 
 const FEED_MAX = 50;
@@ -377,9 +380,9 @@ export default function App() {
   const [animKey,     setAnimKey]     = useState(0);
   const [loaded,      setLoaded]      = useState(false);
 
-  // Listen to Firebase in real time
+// Load from Firebase once on startup
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, USER_DOC), (snap) => {
+    getDoc(doc(db, USER_DOC)).then((snap) => {
       const data = snap.exists() ? snap.data() : {};
       const arr = (v, fb) => Array.isArray(v) ? v : fb;
       const obj = (v, fb) => (v && typeof v === "object" && !Array.isArray(v)) ? v : fb;
@@ -400,7 +403,6 @@ export default function App() {
       setHistory(arr(data.history, []));
       setLoaded(true);
     });
-    return () => unsub();
   }, []);
 
   // Save to Firebase whenever data changes
